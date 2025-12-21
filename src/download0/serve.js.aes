@@ -1,0 +1,53 @@
+// Remote loader - downloads and evals inject.js from WebSocketServer
+
+var WS_PORT = 40404;
+
+try {
+    // start WebSocket server listening to PS4_IP:WS_PORT 
+    ws = new jsmaf.WebSocketServer();
+    ws.port = WS_PORT;
+
+    // move logo to top of screen
+    for (var i = 0; i < jsmaf.root.children.length; i++) {
+        var child = jsmaf.root.children[i];
+        if (child.url && child.url.indexOf("logo") !== -1) {
+            child.y = 20;  // 20px from top
+            break;
+        }
+    }
+
+    // Create text object for logs
+    var logText = new jsmaf.Text();
+    logText.background = "#FFFFFF";
+    logText.x = 20;
+    logText.y = 120;
+    jsmaf.root.children.push(logText);
+    
+    // Log buffer
+    var logBuffer = [];
+    var maxLines = 38; 
+
+    // Replace global log() to show on screen
+    log = function(msg) {
+        logBuffer.push(msg);
+        if (logBuffer.length > maxLines) {
+            logBuffer.shift(); // Remove oldest (auto-scroll)
+        }
+        logText.text = logBuffer.join("\n");
+        ws.broadcast(`[LOG] ${msg}`); // Still send to websocket too
+    };
+    
+    log("=== VUE AFTER FREE ===");
+
+    // handle WebSocket received messages
+    ws.onmessage = function(c, e) {
+        try {
+            var script = String(e.data);
+            jsmaf.eval(script);
+        } catch(err) {
+            ws.broadcast(`ERROR: ${err}`);
+        }
+    };
+} catch(e) {
+    alert(e.stack);
+}
