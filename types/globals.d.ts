@@ -185,6 +185,38 @@ declare type Fn = {
   create <const Args extends ('bigint' | 'number' | 'boolean' | 'string')[], Return extends ('bigint' | 'boolean' | 'string')>(addr: vue.BigInt | number, args: Args, ret: Return): (...func_args: { [K in keyof Args]: ArgTypeToRealType<Args[K]> }) => ArgTypeToRealType<Return>
 }
 
+declare type Fs = {
+  stat (path: string): StructInstance<[
+    { name: 'st_dev', type: 'Uint32' },
+    { name: 'st_ino', type: 'Uint32' },
+    { name: 'st_mode', type: 'Uint16' },
+    { name: 'st_nlink', type: 'Uint16' },
+    { name: 'st_uid', type: 'Uint32' },
+    { name: 'st_gid', type: 'Uint32' },
+    { name: 'st_rdev', type: 'Uint32' },
+    { name: 'st_atim_sec', type: 'Int64' },
+    { name: 'st_atim_nsec', type: 'Int64' },
+    { name: 'st_mtim_sec', type: 'Int64' },
+    { name: 'st_mtim_nsec', type: 'Int64' },
+    { name: 'st_ctim_sec', type: 'Int64' },
+    { name: 'st_ctim_nsec', type: 'Int64' },
+    { name: 'st_size', type: 'Int64' },
+    { name: 'st_blocks', type: 'Int64' },
+    { name: 'st_blksize', type: 'Uint32' },
+    { name: 'st_flags', type: 'Uint32' },
+    { name: 'st_gen', type: 'Uint32' },
+    { name: 'st_birthtim_sec', type: 'Int64' },
+    { name: 'st_birthtim_nsec', type: 'Int64' }
+  ]>
+  exists (path: string): boolean
+  readFile (path: string): Uint8Array
+  readTextFile (path: string): string
+  writeFile (path: string, data: ArrayBufferLike | Uint8Array): void
+  writeTextFile (path: string, data: string): void
+  remove (path: string): void
+  mkdir (path: string): void
+}
+
 declare class SyscallError extends Error {
   syscall: string
   errno: number
@@ -205,3 +237,4 @@ declare var struct: Struct
 declare var utils: Utils
 declare var rop: Rop
 declare var fn: Fn
+declare var fs: Fs
