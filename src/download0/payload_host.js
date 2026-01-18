@@ -386,3 +386,4 @@
     log("Buttons: " + buttons.length);
     log("Use arrow keys to navigate, Enter/X to select");
 })();
+
