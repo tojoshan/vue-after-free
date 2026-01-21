@@ -1,7 +1,14 @@
-# vue-after-free
-A PlayStation Vue userland code execution exploit. 
+<div align="center">
+ 
+# Vue After Free
 
-  * Can be chained with the kernel exploit Lapse up to 12.02 and Poopsploit up to 13.00 on PS4 only.
+<img width="280" height="243" alt="logo2" src="https://github.com/user-attachments/assets/891a79c3-e9ed-41d9-a005-016126c06fc3" />
+
+A PlayStation Vue userland code execution exploit. 
+</div>
+
+> [!NOTE]
+> Can be chained with the kernel exploit Lapse up to 12.02 and Poopsploit up to 13.00 on PS4 only.
 
 ## Requirments
   * Firmware 9.00 or above. 
@@ -10,6 +17,7 @@ A PlayStation Vue userland code execution exploit.
   * Fake or legit activated PS4 user account.
   * FTP access to the console.
   * USB flash drive.
+
   * Playstation Vue 1.01 base and 1.xx patch.(Referred to as "PS Vue" later in the guide).
 
 ### For Non-Jailbroken PS4
