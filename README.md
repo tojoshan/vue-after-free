@@ -53,6 +53,7 @@ Q: How can I run a payload? A: Closing and Reopening Vue is required between pay
 
 # Setup Instructions 
 ## Jailbroken PS4
+A network connection of any kind is required, before trying to run Vue please connect to a local network even if it does not have internet. [Connection Instructions](https://github.com/Vuemony/vue-after-free#connecting-to-the-internet)
   1. Jailbreak your console. 
   2. Enable FTP. 
   3. Install Apollo Save Tool. https://pkg-zone.com/details/APOL00004
@@ -68,6 +69,7 @@ Q: How can I run a payload? A: Closing and Reopening Vue is required between pay
   13. Optionally after jailbreaking run the [np-fake-signin](https://github.com/Vuemony/vue-after-free/blob/main/README.md#np-fake-signin) payload to avoid the PSN pop-up.
 
 ## Non-Jailbroken PS4
+A network connection of any kind is required, before trying to run Vue please connect to a local network even if it does not have internet. [Connection Instructions](https://github.com/Vuemony/vue-after-free#connecting-to-the-internet)
   1. Format your USB Drive to Exfat. 
 > [!WARNING]
 > This will wipe your drive of all data. Backup any important data. 
