@@ -13,6 +13,8 @@
 CVE-2018-4441 was shortly applied but due to instability and bad success rate it was dropped.   
 CVE-2017-7117 is used for the userland, and has been chained with Lapse and Poopsploit(Netctrl) kernel exploits on respective firmwares marked below.
 
+> [!IMPORTANT]
+> Netctrl stability is low due to high memory usage by the exploit compared to the available memory in Vue.
 
 ## Vulnerability Scope
 KEX= Kernel Exploit
@@ -110,9 +112,7 @@ Vue After Free comes preloaded with some payloads.
 
 ## NP-Fake-SignIn  
 The np-fake-signin payload gets rid of the first PS Vue pop-up asking you to sign into PSN.        
-In the payloads section of Vue, you will see np-fake-signin-ps4-user.elf.       
-np-fake-signin-ps4-vue.elf should only be used if you are using the system backup provided on this repo.       
-np-fake-signin-ps4-user.elf should be used for any other fake activated user account.         
+In the payloads section of Vue, you will see np-fake-signin-ps4.elf use it on any Apollo Fake activated account while jailbroken and signed into the targed account.      
 
 > [!IMPORTANT]
 > The np-fake-signin should not be run on a real psn account.
@@ -159,6 +159,8 @@ If you wish to use a new account instead of the default one in the system backup
 - abc — Lapse  
 - [TheFlow](https://github.com/TheOfficialFloW) — NetCtrl  
 - [Lua Loader project](https://github.com/shahrilnet/remote_lua_loader) — Remote Lua loader foundation
+- [Cryptogenic](https://github.com/Cryptogenic/PS4-6.20-WebKit-Code-Execution-Exploit) — Refence for CVE-2018-4441 
+- [rebelle3](https://github.com/rebelle3/cve-2017-7117) — Reference for CVE-2017-7117
 
 ## payload sources:
 - [elfldr.elf](https://github.com/ps4-payload-dev/elfldr) by John Törnblom 
